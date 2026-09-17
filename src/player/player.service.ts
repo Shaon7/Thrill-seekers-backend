@@ -91,22 +91,6 @@ export class PlayerService {
       await this.playerRepository.save(player);
 
 
-       try {
-      await this.mailService.sendWelcomeEmail(
-        savedPlayer.email,
-        savedPlayer.name,
-        savedPlayer.playerId,
-      );
-    } catch (mailError) {
-      /*
-       * Registration should still remain successful
-       * if the email service temporarily fails.
-       */
-      console.error(
-        'Welcome email sending failed:',
-        mailError,
-      );
-    }
     // Never send password back to frontend
     const { password, ...safePlayer } = savedPlayer;
 
