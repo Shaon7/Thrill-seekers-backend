@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { google } from 'googleapis';
+import { gmail } from '@googleapis/gmail';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
 
-  private readonly oauth2Client;
-
+  private readonly oauth2Client: OAuth2Client;
   private readonly gmail;
 
   constructor() {
@@ -14,28 +14,23 @@ export class MailService {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
-    if (
-      !clientId ||
-      !clientSecret ||
-      !refreshToken
-    ) {
+    if (!clientId || !clientSecret || !refreshToken) {
       throw new Error(
         'Google OAuth2 environment variables are missing.',
       );
     }
 
-    this.oauth2Client =
-      new google.auth.OAuth2(
-        clientId,
-        clientSecret,
-        'https://developers.google.com/oauthplayground',
-      );
+    this.oauth2Client = new OAuth2Client(
+      clientId,
+      clientSecret,
+      'https://developers.google.com/oauthplayground',
+    );
 
     this.oauth2Client.setCredentials({
       refresh_token: refreshToken,
     });
 
-    this.gmail = google.gmail({
+    this.gmail = gmail({
       version: 'v1',
       auth: this.oauth2Client,
     });
