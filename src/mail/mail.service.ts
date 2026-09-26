@@ -1,37 +1,111 @@
-import { Injectable } from '@nestjs/common';
-import nodemailer from 'nodemailer';
+import { Injectable, Logger } from '@nestjs/common';
+import { google } from 'googleapis';
 
 @Injectable()
 export class MailService {
-  private readonly transporter =
-    nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(
-        process.env.SMTP_PORT || 587,
-      ),
-      secure:
-        process.env.SMTP_SECURE === 'true',
+  private readonly logger = new Logger(MailService.name);
 
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+  private readonly oauth2Client;
+
+  private readonly gmail;
+
+  constructor() {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+
+    if (
+      !clientId ||
+      !clientSecret ||
+      !refreshToken
+    ) {
+      throw new Error(
+        'Google OAuth2 environment variables are missing.',
+      );
+    }
+
+    this.oauth2Client =
+      new google.auth.OAuth2(
+        clientId,
+        clientSecret,
+        'https://developers.google.com/oauthplayground',
+      );
+
+    this.oauth2Client.setCredentials({
+      refresh_token: refreshToken,
     });
+
+    this.gmail = google.gmail({
+      version: 'v1',
+      auth: this.oauth2Client,
+    });
+
+    this.logger.log(
+      'Google Gmail API initialized successfully.',
+    );
+  }
+
+  private createRawMessage(
+    to: string,
+    subject: string,
+    html: string,
+  ): string {
+    const from =
+      process.env.MAIL_FROM ||
+      process.env.GOOGLE_EMAIL;
+
+    const message = [
+      `From: ${from}`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=UTF-8',
+      '',
+      html,
+    ].join('\r\n');
+
+    return Buffer.from(message)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  }
 
   async sendMail(
     to: string,
     subject: string,
     html: string,
   ) {
-    return this.transporter.sendMail({
-      from:
-        process.env.MAIL_FROM ||
-        process.env.SMTP_USER,
+    try {
+      const raw = this.createRawMessage(
+        to,
+        subject,
+        html,
+      );
 
-      to,
-      subject,
-      html,
-    });
+      const response =
+        await this.gmail.users.messages.send({
+          userId: 'me',
+          requestBody: {
+            raw,
+          },
+        });
+
+      this.logger.log(
+        `Email sent successfully to ${to}`,
+      );
+
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(
+        'Google Gmail API email failed:',
+        error?.response?.data ||
+          error?.message ||
+          error,
+      );
+
+      throw error;
+    }
   }
 
   async sendWelcomeEmail(
