@@ -24,6 +24,7 @@ import { Player } from '../player/player.entity.js';
 import { PointTable } from '../point-table/point-table.entity.js';
 
 import { PaymentService } from '../payment/payment.service.js';
+import { NotificationService } from '../notification/notification.service.js';
 
 @Injectable()
 export class MatchService {
@@ -43,6 +44,7 @@ export class MatchService {
     private readonly paymentService: PaymentService,
 
     private readonly dataSource: DataSource,
+    private readonly notificationService: NotificationService,
   ) {}
 
   // =========================================================
@@ -322,7 +324,7 @@ export class MatchService {
       // allowed
     }
 
-    // Admin
+    // Admin can submit any match
     else if (currentUser.isAdmin) {
       if (!currentUser.playerId) {
         throw new ForbiddenException(
@@ -330,27 +332,7 @@ export class MatchService {
         );
       }
 
-      // Admin cannot submit a match they are playing in.
-      if (
-        match.homePlayerId ===
-          currentUser.playerId ||
-        match.awayPlayerId ===
-          currentUser.playerId
-      ) {
-        throw new ForbiddenException(
-          'An admin cannot submit the result of their own match.',
-        );
-      }
-
-      // Admin can submit only matches assigned to them.
-      if (
-        match.assignedAdminId !==
-        currentUser.playerId
-      ) {
-        throw new ForbiddenException(
-          'You are not assigned to this match.',
-        );
-      }
+            
     }
 
     // Home/Away player
@@ -507,6 +489,21 @@ export class MatchService {
         ]);
       },
     );
+
+    try {
+  await this.notificationService.notifyMatchResultSubmitted(
+    match.matchId,
+    match.homePlayerId,
+    match.awayPlayerId,
+    homeScore,
+    awayScore,
+  );
+} catch (error) {
+  console.error(
+    'Match result notification failed:',
+    error,
+  );
+}
 
     return {
       success: true,

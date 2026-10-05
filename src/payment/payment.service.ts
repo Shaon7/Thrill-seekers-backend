@@ -7,6 +7,7 @@ import {
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { NotificationService } from '../notification/notification.service.js';
 
 import {
   Payment,
@@ -19,6 +20,7 @@ export class PaymentService {
   constructor(
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
+     private readonly notificationService: NotificationService,
   ) {}
 
   // =====================================================
@@ -118,9 +120,25 @@ export class PaymentService {
         reason || undefined,
     });
 
-  return this.paymentRepository.save(
+  const savedPayment =
+  await this.paymentRepository.save(
     payment,
   );
+
+try {
+  await this.notificationService.notifyFineCreated(
+    savedPayment.playerId,
+    savedPayment.amount,
+    reason,
+  );
+} catch (error) {
+  console.error(
+    'Fine notification failed:',
+    error,
+  );
+}
+
+return savedPayment;
 }
   // =====================================================
   // PLAYER SUBMITS PAYMENT
@@ -231,9 +249,39 @@ export class PaymentService {
   payment.verifiedBy =
     null ;
 
-  return this.paymentRepository.save(
+  const savedPayment =  await this.paymentRepository.save(
     payment,
   );
+
+  try {
+  await this.notificationService.notifyPaymentSubmitted(
+    savedPayment.playerId,
+    savedPayment.amount,
+    savedPayment.divisionId,
+    savedPayment.transactionId || '',
+  );
+} catch (error) {
+  console.error(
+    'Player payment notification failed:',
+    error,
+  );
+}
+
+// Notify Super Admin
+try {
+  await this.notificationService.notifySuperAdminPaymentSubmitted(
+    savedPayment.playerId,
+    savedPayment.amount,
+    savedPayment.divisionId,
+    savedPayment.transactionId || '',
+  );
+} catch (error) {
+  console.error(
+    'SuperAdmin payment notification failed:',
+    error,
+  );
+}
+
 }
       
       
@@ -321,9 +369,25 @@ export class PaymentService {
     payment.rejectionReason =
       " ";
 
-    return this.paymentRepository.save(
-      payment,
-    );
+    const savedPayment =
+  await this.paymentRepository.save(
+    payment,
+  );
+
+try {
+  await this.notificationService.notifyPaymentVerified(
+    savedPayment.playerId,
+    savedPayment.amount,
+    savedPayment.divisionId,
+  );
+} catch (error) {
+  console.error(
+    'Payment verification notification failed:',
+    error,
+  );
+}
+
+return savedPayment;
   }
 
   // =====================================================
@@ -368,8 +432,24 @@ export class PaymentService {
     payment.verifiedBy =
       verifiedBy;
 
-    return this.paymentRepository.save(
-      payment,
-    );
+    const savedPayment =
+  await this.paymentRepository.save(
+    payment,
+  );
+
+try {
+  await this.notificationService.notifyPaymentRejected(
+    savedPayment.playerId,
+    savedPayment.divisionId,
+    savedPayment.rejectionReason || '',
+  );
+} catch (error) {
+  console.error(
+    'Payment rejection notification failed:',
+    error,
+  );
+}
+
+return savedPayment;
   }
 }

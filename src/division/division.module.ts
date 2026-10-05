@@ -7,6 +7,7 @@ import { Division } from './division.entity.js';
 import { Player } from '../player/player.entity.js';
 import { PointTable } from '../point-table/point-table.entity.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { MailModule } from '../mail/mail.module.js';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuthModule } from '../auth/auth.module.js';
       Player,
       PointTable,
     ]),
+    MailModule
   ],
   controllers: [DivisionController],
   providers: [DivisionService],

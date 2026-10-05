@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { Division } from './division.entity.js';
 import { Player } from '../player/player.entity.js';
 import { PointTable } from '../point-table/point-table.entity.js';
+import { MailService } from '../mail/mail.service.js';
 
 @Injectable()
 export class DivisionService {
@@ -21,6 +22,7 @@ export class DivisionService {
 
     @InjectRepository(PointTable)
     private readonly pointTableRepository: Repository<PointTable>,
+    private mailService:MailService,
   ) {}
 
   async create(divisionData: Partial<Division>) {
@@ -262,4 +264,132 @@ export class DivisionService {
       message: 'Division deleted successfully',
     };
   }
+
+  async sendRunningLeagueEmails() {
+  const divisions =
+    await this.divisionRepository.find({
+      relations: {
+        players: true,
+      },
+      order: {
+        divisionNumber: 'ASC',
+      },
+    });
+
+  const runningDivisions =
+    divisions.filter(
+      (division) =>
+        division.Status?.toUpperCase() ===
+          'ACTIVE' &&
+        division.divisionId ===
+          'DIV-0008',
+    );
+
+  if (
+    runningDivisions.length ===
+    0
+  ) {
+    throw new NotFoundException(
+      'No running league found',
+    );
+  }
+
+  let totalPlayers = 0;
+  let sentEmails = 0;
+  let failedEmails = 0;
+
+  const failedPlayers: string[] = [];
+
+  for (const division of runningDivisions) {
+    const amount =
+      this.getDivisionFee(
+        division.divisionNumber,
+      );
+
+    for (const player of division.players || []) {
+      totalPlayers++;
+
+      if (!player.email) {
+        failedEmails++;
+
+        failedPlayers.push(
+          `${player.playerId} - email not found`,
+        );
+
+        continue;
+      }
+
+      try {
+        await this.mailService.sendLeagueParticipationEmail(
+          player.email,
+          player.name,
+          player.playerId,
+          division.name,
+          amount,
+        );
+
+        sentEmails++;
+      } catch (error) {
+        failedEmails++;
+
+        failedPlayers.push(
+          `${player.playerId} - email sending failed`,
+        );
+      }
+    }
+  }
+
+  return {
+    success: true,
+    message:
+      'Running league emails processed successfully',
+
+    runningLeagues:
+      runningDivisions.map(
+        (division) => ({
+          divisionId:
+            division.divisionId,
+          divisionName:
+            division.name,
+          playerCount:
+            division.players?.length || 0,
+        }),
+      ),
+
+    totalPlayers,
+    sentEmails,
+    failedEmails,
+    failedPlayers,
+  };
+}
+
+// =====================================================
+// DIVISION FEE
+// =====================================================
+
+private getDivisionFee(
+  divisionNumber?: number,
+): number {
+  if (
+    divisionNumber === 1
+  ) {
+    return 50;
+  }
+
+  if (
+    divisionNumber === 2
+  ) {
+    return 40;
+  }
+
+  if (
+    divisionNumber === 3
+  ) {
+    return 30;
+  }
+
+  throw new ConflictException(
+    `Invalid division number: ${divisionNumber}`,
+  );
+}
 }

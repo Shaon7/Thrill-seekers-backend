@@ -91,6 +91,7 @@ export class PlayerService {
       await this.playerRepository.save(player);
 
 
+
     // Never send password back to frontend
     const { password, ...safePlayer } = savedPlayer;
 

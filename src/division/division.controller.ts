@@ -30,6 +30,12 @@ export class DivisionController {
     return this.divisionService.findAll();
   }
 
+  @Get('sendleaguemail')
+  sendleaguemail()
+  {
+      return this.divisionService.sendRunningLeagueEmails();
+  }
+
   @Get(':divisionId')
   findOne(
     @Param('divisionId') divisionId: string,
@@ -68,4 +74,6 @@ export class DivisionController {
       playerId,
     );
   }
+
+  
 }

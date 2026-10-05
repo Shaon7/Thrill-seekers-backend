@@ -11,6 +11,7 @@ import { SuperAdminModule } from './super-admin/super-admin.module.js';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailModule } from './mail/mail.module.js';
 import { PaymentModule } from './payment/payment.module.js';
+import { NotificationModule } from './notification/notification.module.js';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { PaymentModule } from './payment/payment.module.js';
     SuperAdminModule,
     MailModule,
     PaymentModule,
+    NotificationModule,
   ],
 
   controllers: [

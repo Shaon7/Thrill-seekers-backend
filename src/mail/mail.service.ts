@@ -254,4 +254,544 @@ export class MailService {
       `,
     );
   }
+
+  // =====================================================
+  // LEAGUE PARTICIPATION EMAIL
+  // =====================================================
+
+  async sendLeagueParticipationEmail(
+    to: string,
+    name: string,
+    playerId: string,
+    leagueName: string,
+    amount: number,
+  ) {
+    const paymentDeadline = new Date();
+
+    paymentDeadline.setDate(
+      paymentDeadline.getDate() + 2,
+    );
+
+    const deadlineText =
+      paymentDeadline.toLocaleDateString(
+        undefined,
+        {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        },
+      );
+
+    return this.sendMail(
+      to,
+      `Official League Registration - ${leagueName}`,
+      `
+        <div
+          style="
+            font-family: Arial, sans-serif;
+            max-width: 680px;
+            margin: 0 auto;
+            background: #f4f4f5;
+            color: #18181b;
+            padding: 0;
+          "
+        >
+
+          <!-- HEADER -->
+
+          <div
+            style="
+              background: #080808;
+              padding: 30px 35px;
+              border-bottom: 5px solid #facc15;
+            "
+          >
+            <p
+              style="
+                margin: 0;
+                color: #facc15;
+                font-size: 24px;
+                font-weight: 800;
+                letter-spacing: 1px;
+              "
+            >
+              THRILL SEEKERS
+            </p>
+
+            <p
+              style="
+                margin: 6px 0 0;
+                color: #d4d4d8;
+                font-size: 11px;
+                letter-spacing: 3px;
+                font-weight: 600;
+              "
+            >
+              EFOOTBALL CLUB
+            </p>
+          </div>
+
+          <!-- BODY -->
+
+          <div
+            style="
+              padding: 35px;
+              background: #ffffff;
+            "
+          >
+
+            <p
+              style="
+                margin: 0;
+                color: #71717a;
+                font-size: 12px;
+                font-weight: bold;
+                letter-spacing: 2px;
+                text-transform: uppercase;
+              "
+            >
+              Official League Notification
+            </p>
+
+            <h1
+              style="
+                margin: 10px 0 20px;
+                color: #18181b;
+                font-size: 28px;
+                line-height: 1.3;
+              "
+            >
+              You have been added to
+              <span style="color: #ca8a04;">
+                ${leagueName}
+              </span>
+            </h1>
+
+            <p
+              style="
+                font-size: 15px;
+                line-height: 1.8;
+                color: #3f3f46;
+              "
+            >
+              Dear <strong>${name}</strong>,
+            </p>
+
+            <p
+              style="
+                font-size: 15px;
+                line-height: 1.8;
+                color: #3f3f46;
+              "
+            >
+              We are pleased to inform you that you
+              have been officially registered as a
+              participating player in the
+              <strong>${leagueName}</strong>
+              under Thrill Seekers eFootball Club.
+            </p>
+
+            <!-- PLAYER INFORMATION -->
+
+            <div
+              style="
+                margin: 25px 0;
+                padding: 20px;
+                background: #fafafa;
+                border: 1px solid #e4e4e7;
+                border-radius: 14px;
+              "
+            >
+              <p
+                style="
+                  margin: 0 0 8px;
+                  color: #71717a;
+                  font-size: 11px;
+                  font-weight: bold;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                "
+              >
+                Player Information
+              </p>
+
+              <p
+                style="
+                  margin: 8px 0;
+                  font-size: 15px;
+                "
+              >
+                <strong>Player Name:</strong>
+                ${name}
+              </p>
+
+              <p
+                style="
+                  margin: 8px 0;
+                  font-size: 15px;
+                "
+              >
+                <strong>Player ID:</strong>
+                ${playerId}
+              </p>
+
+              <p
+                style="
+                  margin: 8px 0;
+                  font-size: 15px;
+                "
+              >
+                <strong>League:</strong>
+                ${leagueName}
+              </p>
+            </div>
+
+            <!-- MATCH INFORMATION -->
+
+            <div
+              style="
+                margin: 25px 0;
+                padding: 22px;
+                background: #eff6ff;
+                border-left: 5px solid #2563eb;
+                border-radius: 10px;
+              "
+            >
+              <h3
+                style="
+                  margin: 0 0 12px;
+                  color: #1d4ed8;
+                  font-size: 16px;
+                "
+              >
+                Match Fixture Information
+              </h3>
+
+              <p
+                style="
+                  margin: 0;
+                  color: #334155;
+                  font-size: 14px;
+                  line-height: 1.7;
+                "
+              >
+                Your upcoming match fixtures are
+                available on the Thrill Seekers
+                website.
+              </p>
+
+              <p
+                style="
+                  margin: 12px 0 0;
+                "
+              >
+                <a
+                  href="https://thrillseekers.vercel.app/matches"
+                  style="
+                    display: inline-block;
+                    background: #2563eb;
+                    color: #ffffff;
+                    padding: 12px 18px;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    font-weight: bold;
+                  "
+                >
+                  View My Match Fixtures
+                </a>
+              </p>
+            </div>
+
+            <!-- PAYMENT INFORMATION -->
+
+            <div
+              style="
+                margin: 25px 0;
+                padding: 22px;
+                background: #fffbeb;
+                border: 1px solid #fde68a;
+                border-radius: 14px;
+              "
+            >
+              <p
+                style="
+                  margin: 0;
+                  color: #92400e;
+                  font-size: 12px;
+                  font-weight: bold;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                "
+              >
+                League Participation Fee
+              </p>
+
+              <p
+                style="
+                  margin: 8px 0;
+                  color: #18181b;
+                  font-size: 30px;
+                  font-weight: 800;
+                "
+              >
+                BDT ${amount}
+              </p>
+
+              <p
+                style="
+                  margin: 0;
+                  color: #57534e;
+                  font-size: 14px;
+                  line-height: 1.7;
+                "
+              >
+                Please complete your league
+                participation payment within two days
+                from the date of this notification.
+              </p>
+
+              <p
+                style="
+                  margin: 10px 0 0;
+                  color: #92400e;
+                  font-size: 13px;
+                  font-weight: bold;
+                "
+              >
+                Payment deadline: ${deadlineText}
+              </p>
+
+              <!-- PAYMENT INSTRUCTIONS -->
+
+              <div
+                style="
+                  margin-top: 18px;
+                  padding: 18px;
+                  background: #ffffff;
+                  border: 1px solid #fde68a;
+                  border-radius: 12px;
+                "
+              >
+                <h3
+                  style="
+                    margin: 0 0 12px;
+                    color: #92400e;
+                    font-size: 15px;
+                  "
+                >
+                  Payment Instructions
+                </h3>
+
+                <p
+                  style="
+                    margin: 7px 0;
+                    color: #57534e;
+                    font-size: 14px;
+                    line-height: 1.7;
+                  "
+                >
+                  1. Complete your payment using the
+                  official payment method provided by
+                  Thrill Seekers Management.
+                </p>
+
+                <p
+                  style="
+                    margin: 7px 0;
+                    color: #57534e;
+                    font-size: 14px;
+                    line-height: 1.7;
+                  "
+                >
+                  2. Keep your payment transaction or
+                  reference ID after completing the payment.
+                </p>
+
+                <p
+                  style="
+                    margin: 7px 0;
+                    color: #57534e;
+                    font-size: 14px;
+                    line-height: 1.7;
+                  "
+                >
+                  3. Login to the Thrill Seekers website
+                  and go to:
+                  <strong>
+                    Payment → Pending Payment
+                  </strong>
+                </p>
+
+                <p
+                  style="
+                    margin: 7px 0;
+                    color: #57534e;
+                    font-size: 14px;
+                    line-height: 1.7;
+                  "
+                >
+                  4. Enter your payment information,
+                  including your sender bKash number and
+                  transaction ID.
+                </p>
+
+                <p
+                  style="
+                    margin: 7px 0;
+                    color: #57534e;
+                    font-size: 14px;
+                    line-height: 1.7;
+                  "
+                >
+                  5. Submit the payment information and
+                  wait for confirmation from Thrill Seekers
+                  Management.
+                </p>
+
+              </div>
+            </div>
+
+            <!-- IMPORTANT INFORMATION -->
+
+            <div
+              style="
+                margin: 25px 0;
+                padding: 20px;
+                background: #fafafa;
+                border: 1px solid #e4e4e7;
+                border-radius: 14px;
+              "
+            >
+              <h3
+                style="
+                  margin: 0 0 12px;
+                  font-size: 16px;
+                  color: #18181b;
+                "
+              >
+                Important Information
+              </h3>
+
+              <p
+                style="
+                  margin: 7px 0;
+                  color: #52525b;
+                  font-size: 14px;
+                  line-height: 1.7;
+                "
+              >
+                • Please check your match fixtures
+                regularly.
+              </p>
+
+              <p
+                style="
+                  margin: 7px 0;
+                  color: #52525b;
+                  font-size: 14px;
+                  line-height: 1.7;
+                "
+              >
+                • Complete your matches within the
+                assigned deadlines.
+              </p>
+
+              <p
+                style="
+                  margin: 7px 0;
+                  color: #52525b;
+                  font-size: 14px;
+                  line-height: 1.7;
+                "
+              >
+                • Submit your match results through
+                the website.
+              </p>
+
+              <p
+                style="
+                  margin: 7px 0;
+                  color: #52525b;
+                  font-size: 14px;
+                  line-height: 1.7;
+                "
+              >
+                • Submit your payment transaction
+                details after making the payment.
+              </p>
+
+              <p
+                style="
+                  margin: 7px 0;
+                  color: #52525b;
+                  font-size: 14px;
+                  line-height: 1.7;
+                "
+              >
+                • Follow the official Thrill Seekers
+                league rules and instructions.
+              </p>
+            </div>
+
+            <!-- FORMAL CLOSING -->
+
+            <p
+              style="
+                margin-top: 30px;
+                font-size: 15px;
+                line-height: 1.8;
+                color: #3f3f46;
+              "
+            >
+              We are pleased to have you as part of
+              this league and look forward to your
+              participation. We wish you the very best
+              throughout the league.
+            </p>
+
+            <p
+              style="
+                margin-top: 30px;
+                font-size: 14px;
+                line-height: 1.7;
+                color: #52525b;
+              "
+            >
+              Best Regards,<br />
+              <strong style="color: #18181b;">
+                Thrill Seekers Management
+              </strong><br />
+              Thrill Seekers eFootball Club<br />
+              https://thrillseekers.vercel.app
+            </p>
+
+          </div>
+
+          <!-- FOOTER -->
+
+          <div
+            style="
+              background: #080808;
+              padding: 20px 35px;
+              text-align: center;
+            "
+          >
+            <p
+              style="
+                margin: 0;
+                color: #71717a;
+                font-size: 11px;
+              "
+            >
+              This is an official automated
+              notification from Thrill Seekers
+              eFootball Club.
+            </p>
+          </div>
+
+        </div>
+      `,
+    );
+  }
 }

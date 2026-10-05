@@ -4,12 +4,14 @@ import { PaymentController } from './payment.controller.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Payment } from './payment.entity.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { NotificationModule } from '../notification/notification.module.js';
 
 
 @Module({
 
   imports:[AuthModule,
-    TypeOrmModule.forFeature([Payment])],
+    TypeOrmModule.forFeature([Payment]),
+    NotificationModule],
   controllers:[PaymentController],
   providers: [PaymentService],
    exports: [
