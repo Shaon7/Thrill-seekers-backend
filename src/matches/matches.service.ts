@@ -507,8 +507,9 @@ export class MatchService {
     error,
   );
 
-  await this.eloService.rebuildGlobalRatings();
+  
 }
+await this.eloService.rebuildGlobalRatings();
 
     return {
       success: true,
