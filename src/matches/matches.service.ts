@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
+import { EloService } from '../elo/elo.service.js';
 
 import {
   DataSource,
@@ -45,6 +46,8 @@ export class MatchService {
 
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
+    private readonly eloService: EloService,
+
   ) {}
 
   // =========================================================
@@ -503,6 +506,8 @@ export class MatchService {
     'Match result notification failed:',
     error,
   );
+
+  await this.eloService.rebuildGlobalRatings();
 }
 
     return {

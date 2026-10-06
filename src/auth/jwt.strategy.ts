@@ -27,14 +27,17 @@ export class JwtStrategy extends PassportStrategy(
   }
 
   async validate(payload: any) {
-  console.log("JWT PAYLOAD:", payload);
+    console.log('JWT PAYLOAD:', payload);
 
-  return {
-    id: payload.sub,
-    playerId: payload.playerId,
-    email: payload.email,
-    userType: payload.userType,
-    isAdmin: payload.isAdmin ?? false,
-  };
-}
+    return {
+      id: payload.sub,
+      playerId: payload.playerId,
+      email: payload.email,
+
+      // Support both userType and role
+      userType: payload.userType ?? payload.role,
+
+      isAdmin: payload.isAdmin ?? false,
+    };
+  }
 }

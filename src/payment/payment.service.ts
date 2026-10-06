@@ -270,11 +270,12 @@ return savedPayment;
 // Notify Super Admin
 try {
   await this.notificationService.notifySuperAdminPaymentSubmitted(
-    savedPayment.playerId,
-    savedPayment.amount,
-    savedPayment.divisionId,
-    savedPayment.transactionId || '',
-  );
+  null,
+  'SUPERADMIN',
+  savedPayment.amount,
+  savedPayment.divisionId,
+  savedPayment.transactionId || '',
+);
 } catch (error) {
   console.error(
     'SuperAdmin payment notification failed:',

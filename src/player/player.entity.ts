@@ -40,6 +40,18 @@ export class Player {
 })
 passwordResetCode: string | null;
 
+    @Column({
+  type: 'double precision',
+  default: 1000,
+})
+rating: number;
+
+@Column({
+  type: 'int',
+  nullable: true,
+})
+ranking: number | null;
+
 @Column({
   type: 'timestamp',
   nullable: true,

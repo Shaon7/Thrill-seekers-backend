@@ -23,7 +23,8 @@ export class NotificationService {
   // =====================================================
 
   async createNotification(
-    playerId: string,
+    playerId: string | null,
+    recipientId: string,
     title: string,
     message: string,
     type: NotificationType,
@@ -32,6 +33,7 @@ export class NotificationService {
     const notification =
       this.notificationRepository.create({
         playerId,
+        recipientId,
         title,
         message,
         type,
@@ -56,6 +58,7 @@ export class NotificationService {
   ) {
     return this.createNotification(
       playerId,
+      playerId,
       title,
       message,
       NotificationType.SYSTEM,
@@ -76,6 +79,7 @@ export class NotificationService {
   ) {
     return this.createNotification(
       playerId,
+      playerId,
       'Payment Submitted',
       `Your payment of BDT ${amount} for division ${divisionId} has been submitted and is waiting for verification. Transaction ID: ${transactionId}.`,
       NotificationType.PAYMENT,
@@ -89,15 +93,17 @@ export class NotificationService {
   // =====================================================
 
   async notifySuperAdminPaymentSubmitted(
-    playerId: string,
+    playerId: null,
+    recipientId: 'SUPERADMIN',
     amount: number | string,
     divisionId: string,
     transactionId: string,
   ) {
     return this.createNotification(
-      'SUPERADMIN',
+      null,
+      recipientId,
       'New Payment Submitted',
-      `${playerId} submitted a payment of BDT ${amount} for division ${divisionId}. Transaction ID: ${transactionId}.`,
+      `A player submitted a payment of BDT ${amount} for division ${divisionId}. Transaction ID: ${transactionId}.`,
       NotificationType.PAYMENT,
       '/payments',
     );
@@ -114,6 +120,7 @@ export class NotificationService {
     divisionId: string,
   ) {
     return this.createNotification(
+      playerId,
       playerId,
       'Payment Verified',
       `Your payment of BDT ${amount} for division ${divisionId} has been verified successfully.`,
@@ -138,6 +145,7 @@ export class NotificationService {
 
     return this.createNotification(
       playerId,
+      playerId,
       'Payment Rejected',
       `Your payment for division ${divisionId} has been rejected.${reason}`,
       NotificationType.PAYMENT,
@@ -160,6 +168,7 @@ export class NotificationService {
       : '';
 
     return this.createNotification(
+      playerId,
       playerId,
       'Fine Created',
       `A fine of BDT ${amount} has been added to your account.${fineReason}`,
@@ -188,6 +197,7 @@ export class NotificationService {
     notifications.push(
       await this.createNotification(
         homePlayerId,
+        homePlayerId,
         'Match Result Submitted',
         message,
         NotificationType.MATCH_RESULT,
@@ -201,6 +211,7 @@ export class NotificationService {
     ) {
       notifications.push(
         await this.createNotification(
+          awayPlayerId,
           awayPlayerId,
           'Match Result Submitted',
           message,
@@ -222,7 +233,7 @@ export class NotificationService {
   ) {
     return this.notificationRepository.find({
       where: {
-        playerId,
+        recipientId: playerId,
       },
       order: {
         createdAt: 'DESC',
@@ -238,7 +249,7 @@ export class NotificationService {
   async getSuperAdminNotifications() {
     return this.notificationRepository.find({
       where: {
-        playerId: 'SUPERADMIN',
+        recipientId: 'SUPERADMIN',
       },
       order: {
         createdAt: 'DESC',
@@ -256,7 +267,7 @@ export class NotificationService {
   ) {
     return this.notificationRepository.count({
       where: {
-        playerId,
+        recipientId: playerId,
         isRead: false,
       },
     });
@@ -269,7 +280,7 @@ export class NotificationService {
   async getSuperAdminUnreadCount() {
     return this.notificationRepository.count({
       where: {
-        playerId: 'SUPERADMIN',
+        recipientId: 'SUPERADMIN',
         isRead: false,
       },
     });
@@ -281,13 +292,13 @@ export class NotificationService {
 
   async markAsRead(
     notificationId: number,
-    playerId: string,
+    recipientId: string,
   ) {
     const notification =
       await this.notificationRepository.findOne({
         where: {
           id: notificationId,
-          playerId,
+          recipientId,
         },
       });
 
@@ -318,11 +329,11 @@ export class NotificationService {
   // =====================================================
 
   async markAllAsRead(
-    playerId: string,
+    recipientId: string,
   ) {
     await this.notificationRepository.update(
       {
-        playerId,
+        recipientId,
         isRead: false,
       },
       {
@@ -343,13 +354,13 @@ export class NotificationService {
 
   async remove(
     notificationId: number,
-    playerId: string,
+    recipientId: string,
   ) {
     const notification =
       await this.notificationRepository.findOne({
         where: {
           id: notificationId,
-          playerId,
+          recipientId,
         },
       });
 

@@ -11,6 +11,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { PaymentModule } from '../payment/payment.module.js';
 import { NotificationModule } from '../notification/notification.module.js';
+import { EloModule } from '../elo/elo.module.js';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NotificationModule } from '../notification/notification.module.js';
       Player,
     ]),
     NotificationModule,
+    EloModule,
   ],
   controllers: [
     MatchController,

@@ -12,6 +12,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailModule } from './mail/mail.module.js';
 import { PaymentModule } from './payment/payment.module.js';
 import { NotificationModule } from './notification/notification.module.js';
+import { EloModule } from './elo/elo.module.js';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { NotificationModule } from './notification/notification.module.js';
     MailModule,
     PaymentModule,
     NotificationModule,
+    EloModule,
   ],
 
   controllers: [

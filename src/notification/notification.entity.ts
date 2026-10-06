@@ -16,8 +16,12 @@ export class Notification {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  playerId: string;
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  playerId: string | null;
 
   @Column()
   title: string;
@@ -32,10 +36,17 @@ export class Notification {
   type: NotificationType;
 
   @Column({
-    type:'varchar',
+    type: 'varchar',
     nullable: true,
   })
   link: string | null;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: false,
+  })
+  recipientId: string;
 
   @Column({
     default: false,
