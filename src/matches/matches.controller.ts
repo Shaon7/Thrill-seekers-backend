@@ -98,6 +98,27 @@ export class MatchController {
   }
 
   // =====================================================
+// UPDATE COMPLETED MATCH RESULT
+// SUPERADMIN ONLY
+// =====================================================
+
+@Patch(':matchId/result')
+@UseGuards(JwtAuthGuard, SuperAdminGuard)
+async updateResult(
+  @Param('matchId') matchId: string,
+  @Body()
+  resultData: {
+    homeScore: number;
+    awayScore: number;
+  },
+) {
+  return this.matchService.updateResult(
+    matchId,
+    resultData.homeScore,
+    resultData.awayScore,
+  );
+}
+  // =====================================================
   // ASSIGN ADMIN
   // SUPERADMIN ONLY
   // =====================================================

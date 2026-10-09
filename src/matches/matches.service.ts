@@ -528,6 +528,188 @@ await this.eloService.rebuildGlobalRatings();
     };
   }
 
+  // =====================================================
+// UPDATE COMPLETED MATCH RESULT
+// UPDATE POINT TABLE + ELO RATINGS
+// SUPERADMIN ONLY
+// =====================================================
+
+async updateResult(
+  matchId: string,
+  homeScore: number,
+  awayScore: number,
+) {
+  // -----------------------------------------------
+  // 1. Validate scores
+  // -----------------------------------------------
+
+  if (
+    !Number.isInteger(homeScore) ||
+    !Number.isInteger(awayScore)
+  ) {
+    throw new BadRequestException(
+      'Scores must be whole numbers.',
+    );
+  }
+
+  if (homeScore < 0 || awayScore < 0) {
+    throw new BadRequestException(
+      'Scores cannot be negative.',
+    );
+  }
+
+  // -----------------------------------------------
+  // 2. Update match and point table atomically
+  // -----------------------------------------------
+
+  const updatedMatch = await this.dataSource.transaction(
+    async (manager) => {
+      const matchRepo = manager.getRepository(Match);
+      const pointTableRepo = manager.getRepository(PointTable);
+
+      const match = await matchRepo.findOne({
+        where: { matchId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!match) {
+        throw new NotFoundException('Match not found.');
+      }
+
+      if (match.status !== MatchStatus.COMPLETED) {
+        throw new BadRequestException(
+          'Only completed matches can have their results corrected.',
+        );
+      }
+
+      const oldHomeScore = Number(match.homeScore);
+      const oldAwayScore = Number(match.awayScore);
+
+      if (
+        oldHomeScore === homeScore &&
+        oldAwayScore === awayScore
+      ) {
+        throw new BadRequestException(
+          'The new result is the same as the existing result.',
+        );
+      }
+
+      const home = await pointTableRepo.findOne({
+        where: {
+          competitionId: match.competitionId,
+          playerId: match.homePlayerId,
+        },
+      });
+
+      const away = await pointTableRepo.findOne({
+        where: {
+          competitionId: match.competitionId,
+          playerId: match.awayPlayerId,
+        },
+      });
+
+      if (!home || !away) {
+        throw new NotFoundException(
+          'Point table records for both players were not found.',
+        );
+      }
+
+      // -----------------------------------------------
+      // 3. Reverse the old result's W/D/L and points
+      // -----------------------------------------------
+
+      if (oldHomeScore > oldAwayScore) {
+        home.won -= 1;
+        home.points -= 3;
+        away.lost -= 1;
+      } else if (oldHomeScore < oldAwayScore) {
+        home.lost -= 1;
+        away.won -= 1;
+        away.points -= 3;
+      } else {
+        home.drawn -= 1;
+        away.drawn -= 1;
+
+        home.points -= 1;
+        away.points -= 1;
+      }
+
+      // -----------------------------------------------
+      // 4. Correct the goal totals
+      // -----------------------------------------------
+
+      home.goalsFor += homeScore - oldHomeScore;
+      home.goalsAgainst += awayScore - oldAwayScore;
+
+      away.goalsFor += awayScore - oldAwayScore;
+      away.goalsAgainst += homeScore - oldHomeScore;
+
+      // -----------------------------------------------
+      // 5. Apply the new result's W/D/L and points
+      // -----------------------------------------------
+
+      if (homeScore > awayScore) {
+        home.won += 1;
+        home.points += 3;
+        away.lost += 1;
+      } else if (homeScore < awayScore) {
+        home.lost += 1;
+        away.won += 1;
+        away.points += 3;
+      } else {
+        home.drawn += 1;
+        away.drawn += 1;
+
+        home.points += 1;
+        away.points += 1;
+      }
+
+      // -----------------------------------------------
+      // 6. Recalculate goal difference
+      // -----------------------------------------------
+
+      home.goalDifference =
+        home.goalsFor - home.goalsAgainst;
+
+      away.goalDifference =
+        away.goalsFor - away.goalsAgainst;
+
+      // -----------------------------------------------
+      // 7. Save corrected score and point table
+      // -----------------------------------------------
+
+      match.homeScore = homeScore;
+      match.awayScore = awayScore;
+
+      await pointTableRepo.save([home, away]);
+
+      return await matchRepo.save(match);
+    },
+  );
+
+  // -----------------------------------------------
+  // 8. Rebuild all global Elo ratings and rankings
+  // -----------------------------------------------
+  // This is important because later completed matches
+  // may depend on the corrected match's rating.
+
+  await this.eloService.rebuildGlobalRatings();
+
+  return {
+    success: true,
+    message: 'Match result updated successfully.',
+    match: updatedMatch,
+    previousResult: {
+      homeScore: updatedMatch.homeScore,
+      awayScore: updatedMatch.awayScore,
+    },
+    newResult: {
+      homeScore,
+      awayScore,
+    },
+  };
+}
+
   // =========================================================
   // GENERATE DOUBLE ROUND-ROBIN MATCHES
   // =========================================================
