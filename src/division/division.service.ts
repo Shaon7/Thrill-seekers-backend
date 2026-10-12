@@ -22,8 +22,13 @@ export class DivisionService {
 
     @InjectRepository(PointTable)
     private readonly pointTableRepository: Repository<PointTable>,
-    private mailService:MailService,
+
+    private readonly mailService: MailService,
   ) {}
+
+  // =====================================================
+  // CREATE DIVISION
+  // =====================================================
 
   async create(divisionData: Partial<Division>) {
     const divisions = await this.divisionRepository.find({
@@ -53,15 +58,35 @@ export class DivisionService {
       name = `Thrill Seekers Division ${divisionData.divisionNumber}`;
     }
 
-    const division = this.divisionRepository.create({
+    // Do not allow the request body to set the division ID,
+    // competition ID, status, or initial player roster.
+    const dataToSave: Partial<Division> = {
       ...divisionData,
+    };
+
+    delete dataToSave.id;
+    delete dataToSave.divisionId;
+    delete dataToSave.competitionId;
+    delete dataToSave.Status;
+    delete dataToSave.players;
+    delete dataToSave.createdAt;
+    delete dataToSave.updatedAt;
+
+    const division = this.divisionRepository.create({
+      ...dataToSave,
       divisionId,
       competitionId: divisionId,
       name,
+      Status: 'IN_PROGRESS',
+      players: [],
     });
 
     return this.divisionRepository.save(division);
   }
+
+  // =====================================================
+  // GET ALL DIVISIONS
+  // =====================================================
 
   async findAll() {
     return this.divisionRepository.find({
@@ -75,6 +100,10 @@ export class DivisionService {
       },
     });
   }
+
+  // =====================================================
+  // GET ONE DIVISION
+  // =====================================================
 
   async findOne(divisionId: string) {
     const division = await this.divisionRepository.findOne({
@@ -93,22 +122,19 @@ export class DivisionService {
     return division;
   }
 
+  // =====================================================
+  // ADD PLAYER
+  // Only allowed before the league starts.
+  // This operation changes the roster only.
+  // =====================================================
+
   async addPlayer(
     divisionId: string,
     playerId: string,
   ) {
-    const division = await this.divisionRepository.findOne({
-      where: {
-        divisionId,
-      },
-      relations: {
-        players: true,
-      },
-    });
+    const division = await this.findOne(divisionId);
 
-    if (!division) {
-      throw new NotFoundException('Division not found');
-    }
+    this.ensureDivisionIsInProgress(division);
 
     const player = await this.playerRepository.findOne({
       where: {
@@ -120,7 +146,6 @@ export class DivisionService {
       throw new NotFoundException('Player not found');
     }
 
-    // Check whether player is already in this division
     const alreadyAdded = division.players.some(
       (divisionPlayer) =>
         divisionPlayer.playerId === playerId,
@@ -132,66 +157,33 @@ export class DivisionService {
       );
     }
 
-    // Add player to division
     division.players.push(player);
 
     await this.divisionRepository.save(division);
 
-    // Check whether point-table row already exists
-    const existingPointTableRow =
-      await this.pointTableRepository.findOne({
-        where: {
-          competitionId: division.competitionId,
-          playerId: playerId,
-        },
-      });
-
-    // Create initial point-table row
-    if (!existingPointTableRow) {
-      const pointTableRow =
-        this.pointTableRepository.create({
-          competitionId: division.competitionId,
-          playerId: playerId,
-          played: 0,
-          won: 0,
-          drawn: 0,
-          lost: 0,
-          goalsFor: 0,
-          goalsAgainst: 0,
-          goalDifference: 0,
-          points: 0,
-        });
-
-      await this.pointTableRepository.save(
-        pointTableRow,
-      );
-    }
-
     return {
       success: true,
-      message:
-        'Player added to division and point table successfully',
+      message: 'Player added to division successfully',
       divisionId: division.divisionId,
       playerId: player.playerId,
+      playerCount: division.players.length,
+      status: division.Status,
     };
   }
+
+  // =====================================================
+  // REMOVE PLAYER
+  // Only allowed before the league starts.
+  // This operation changes the roster only.
+  // =====================================================
 
   async removePlayer(
     divisionId: string,
     playerId: string,
   ) {
-    const division = await this.divisionRepository.findOne({
-      where: {
-        divisionId,
-      },
-      relations: {
-        players: true,
-      },
-    });
+    const division = await this.findOne(divisionId);
 
-    if (!division) {
-      throw new NotFoundException('Division not found');
-    }
+    this.ensureDivisionIsInProgress(division);
 
     const playerIndex = division.players.findIndex(
       (player) => player.playerId === playerId,
@@ -207,18 +199,89 @@ export class DivisionService {
 
     await this.divisionRepository.save(division);
 
-    // Also remove player's point-table row
-    await this.pointTableRepository.delete({
-      competitionId: division.competitionId,
-      playerId: playerId,
+    return {
+      success: true,
+      message: 'Player removed from division successfully',
+      divisionId: division.divisionId,
+      playerId,
+      playerCount: division.players.length,
+      status: division.Status,
+    };
+  }
+
+  // =====================================================
+  // REPLACE PLAYER
+  // Only allowed before the league starts.
+  // This operation changes the roster only.
+  // =====================================================
+
+  async replacePlayer(
+    divisionId: string,
+    oldPlayerId: string,
+    newPlayerId: string,
+  ) {
+    const division = await this.findOne(divisionId);
+
+    this.ensureDivisionIsInProgress(division);
+
+    if (oldPlayerId === newPlayerId) {
+      throw new ConflictException(
+        'The new player must be different from the current player',
+      );
+    }
+
+    const oldPlayerIndex = division.players.findIndex(
+      (player) => player.playerId === oldPlayerId,
+    );
+
+    if (oldPlayerIndex === -1) {
+      throw new NotFoundException(
+        'The player to replace is not in this division',
+      );
+    }
+
+    const newPlayer = await this.playerRepository.findOne({
+      where: {
+        playerId: newPlayerId,
+      },
     });
+
+    if (!newPlayer) {
+      throw new NotFoundException(
+        'The new player was not found',
+      );
+    }
+
+    const newPlayerAlreadyAdded = division.players.some(
+      (player) => player.playerId === newPlayerId,
+    );
+
+    if (newPlayerAlreadyAdded) {
+      throw new ConflictException(
+        'The new player is already in this division',
+      );
+    }
+
+    division.players[oldPlayerIndex] = newPlayer;
+
+    await this.divisionRepository.save(division);
 
     return {
       success: true,
-      message:
-        'Player removed from division successfully',
+      message: 'Player replaced successfully',
+      divisionId: division.divisionId,
+      removedPlayerId: oldPlayerId,
+      addedPlayerId: newPlayer.playerId,
+      playerCount: division.players.length,
+      status: division.Status,
     };
   }
+
+  // =====================================================
+  // UPDATE DIVISION DETAILS
+  // Status and players cannot be changed through this route.
+  // Start League should control the status transition.
+  // =====================================================
 
   async update(
     divisionId: string,
@@ -226,34 +289,48 @@ export class DivisionService {
   ) {
     const division = await this.findOne(divisionId);
 
-    if (
-      divisionData.divisionNumber !== undefined
-    ) {
-      if (divisionData.divisionNumber === 1) {
-        divisionData.name =
+    const editableData: Partial<Division> = {
+      ...divisionData,
+    };
+
+    // Prevent bypassing the Start League process.
+    delete editableData.Status;
+    delete editableData.players;
+    delete editableData.id;
+    delete editableData.divisionId;
+    delete editableData.competitionId;
+    delete editableData.createdAt;
+    delete editableData.updatedAt;
+
+    if (editableData.divisionNumber !== undefined) {
+      if (editableData.divisionNumber === 1) {
+        editableData.name =
           'Thrill Seekers Premier League';
-      } else if (divisionData.divisionNumber === 2) {
-        divisionData.name =
+      } else if (editableData.divisionNumber === 2) {
+        editableData.name =
           'Thrill Seekers Championship';
-      } else if (divisionData.divisionNumber === 3) {
-        divisionData.name =
+      } else if (editableData.divisionNumber === 3) {
+        editableData.name =
           'Thrill Seekers League One';
       } else {
-        divisionData.name =
-          `Thrill Seekers Division ${divisionData.divisionNumber}`;
+        editableData.name =
+          `Thrill Seekers Division ${editableData.divisionNumber}`;
       }
     }
 
-    Object.assign(division, divisionData);
+    Object.assign(division, editableData);
 
     return this.divisionRepository.save(division);
   }
 
+  // =====================================================
+  // DELETE DIVISION
+  // =====================================================
+
   async remove(divisionId: string) {
     const division = await this.findOne(divisionId);
 
-    // Remove all point-table rows belonging
-    // to this division
+    // Delete all point-table rows belonging to this division.
     await this.pointTableRepository.delete({
       competitionId: division.competitionId,
     });
@@ -261,13 +338,18 @@ export class DivisionService {
     await this.divisionRepository.remove(division);
 
     return {
+      success: true,
       message: 'Division deleted successfully',
     };
   }
 
+  // =====================================================
+  // SEND RUNNING LEAGUE EMAILS
+  // Existing behavior preserved.
+  // =====================================================
+
   async sendRunningLeagueEmails() {
-  const divisions =
-    await this.divisionRepository.find({
+    const divisions = await this.divisionRepository.find({
       relations: {
         players: true,
       },
@@ -276,120 +358,121 @@ export class DivisionService {
       },
     });
 
-  const runningDivisions =
-    divisions.filter(
+    const runningDivisions = divisions.filter(
       (division) =>
-        division.Status?.toUpperCase() ===
+        String(division.Status ?? '').toUpperCase() ===
           'ACTIVE' &&
-        division.divisionId ===
-          'DIV-0008',
+        division.divisionId === 'DIV-0008',
     );
 
-  if (
-    runningDivisions.length ===
-    0
-  ) {
-    throw new NotFoundException(
-      'No running league found',
-    );
-  }
+    if (runningDivisions.length === 0) {
+      throw new NotFoundException(
+        'No running league found',
+      );
+    }
 
-  let totalPlayers = 0;
-  let sentEmails = 0;
-  let failedEmails = 0;
+    let totalPlayers = 0;
+    let sentEmails = 0;
+    let failedEmails = 0;
 
-  const failedPlayers: string[] = [];
+    const failedPlayers: string[] = [];
 
-  for (const division of runningDivisions) {
-    const amount =
-      this.getDivisionFee(
+    for (const division of runningDivisions) {
+      const amount = this.getDivisionFee(
         division.divisionNumber,
       );
 
-    for (const player of division.players || []) {
-      totalPlayers++;
+      for (const player of division.players || []) {
+        totalPlayers++;
 
-      if (!player.email) {
-        failedEmails++;
+        if (!player.email) {
+          failedEmails++;
 
-        failedPlayers.push(
-          `${player.playerId} - email not found`,
-        );
+          failedPlayers.push(
+            `${player.playerId} - email not found`,
+          );
 
-        continue;
-      }
+          continue;
+        }
 
-      try {
-        await this.mailService.sendLeagueParticipationEmail(
-          player.email,
-          player.name,
-          player.playerId,
-          division.name,
-          amount,
-        );
+        try {
+          await this.mailService.sendLeagueParticipationEmail(
+            player.email,
+            player.name,
+            player.playerId,
+            division.name,
+            amount,
+          );
 
-        sentEmails++;
-      } catch (error) {
-        failedEmails++;
+          sentEmails++;
+        } catch (error) {
+          failedEmails++;
 
-        failedPlayers.push(
-          `${player.playerId} - email sending failed`,
-        );
+          failedPlayers.push(
+            `${player.playerId} - email sending failed`,
+          );
+        }
       }
     }
-  }
 
-  return {
-    success: true,
-    message:
-      'Running league emails processed successfully',
+    return {
+      success: true,
+      message: 'Running league emails processed successfully',
 
-    runningLeagues:
-      runningDivisions.map(
+      runningLeagues: runningDivisions.map(
         (division) => ({
-          divisionId:
-            division.divisionId,
-          divisionName:
-            division.name,
-          playerCount:
-            division.players?.length || 0,
+          divisionId: division.divisionId,
+          divisionName: division.name,
+          playerCount: division.players?.length || 0,
         }),
       ),
 
-    totalPlayers,
-    sentEmails,
-    failedEmails,
-    failedPlayers,
-  };
-}
-
-// =====================================================
-// DIVISION FEE
-// =====================================================
-
-private getDivisionFee(
-  divisionNumber?: number,
-): number {
-  if (
-    divisionNumber === 1
-  ) {
-    return 50;
+      totalPlayers,
+      sentEmails,
+      failedEmails,
+      failedPlayers,
+    };
   }
 
-  if (
-    divisionNumber === 2
-  ) {
-    return 40;
+  // =====================================================
+  // CHECK DIVISION STATUS
+  // =====================================================
+
+  private ensureDivisionIsInProgress(
+    division: Division,
+  ): void {
+    const status = String(
+      division.Status ?? '',
+    ).trim().toUpperCase();
+
+    if (status !== 'IN_PROGRESS') {
+      throw new ConflictException(
+        'Players can only be added, removed, or replaced before the league starts',
+      );
+    }
   }
 
-  if (
-    divisionNumber === 3
-  ) {
-    return 30;
-  }
+  // =====================================================
+  // DIVISION FEE
+  // =====================================================
 
-  throw new ConflictException(
-    `Invalid division number: ${divisionNumber}`,
-  );
-}
+  private getDivisionFee(
+    divisionNumber?: number,
+  ): number {
+    if (divisionNumber === 1) {
+      return 50;
+    }
+
+    if (divisionNumber === 2) {
+      return 40;
+    }
+
+    if (divisionNumber === 3) {
+      return 30;
+    }
+
+    throw new ConflictException(
+      `Invalid division number: ${divisionNumber}`,
+    );
+  }
 }

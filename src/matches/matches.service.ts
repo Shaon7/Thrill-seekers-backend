@@ -736,6 +736,8 @@ async updateResult(
   const players =
     division.players || [];
 
+  
+
   if (players.length < 2) {
     throw new BadRequestException(
       'At least 2 players are required to generate matches.',
@@ -1132,6 +1134,8 @@ async updateResult(
     payments.push(payment);
   }
 
+    division.Status = 'ACTIVE';
+await this.divisionRepository.save(division);
   return {
     success: true,
     message:

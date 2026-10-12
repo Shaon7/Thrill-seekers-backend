@@ -22,7 +22,10 @@ export class DivisionController {
   @UseGuards(JwtAuthGuard, SuperAdminGuard)
   @Post()
   create(@Body() divisionData: any) {
-    return this.divisionService.create(divisionData);
+    return this.divisionService.create({
+      ...divisionData,
+      Status: 'IN_PROGRESS',
+    });
   }
 
   @Get()
@@ -31,9 +34,8 @@ export class DivisionController {
   }
 
   @Get('sendleaguemail')
-  sendleaguemail()
-  {
-      return this.divisionService.sendRunningLeagueEmails();
+  sendleaguemail() {
+    return this.divisionService.sendRunningLeagueEmails();
   }
 
   @Get(':divisionId')
@@ -63,6 +65,7 @@ export class DivisionController {
     return this.divisionService.remove(divisionId);
   }
 
+  // Add player while the division is still in setup mode.
   @UseGuards(JwtAuthGuard, SuperAdminGuard)
   @Post(':divisionId/players/:playerId')
   addPlayer(
@@ -75,5 +78,31 @@ export class DivisionController {
     );
   }
 
-  
+  // Remove player while the division is still in setup mode.
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  @Delete(':divisionId/players/:playerId')
+  removePlayer(
+    @Param('divisionId') divisionId: string,
+    @Param('playerId') playerId: string,
+  ) {
+    return this.divisionService.removePlayer(
+      divisionId,
+      playerId,
+    );
+  }
+
+  // Replace one roster member with another before the league starts.
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  @Patch(':divisionId/players/:oldPlayerId/replace/:newPlayerId')
+  replacePlayer(
+    @Param('divisionId') divisionId: string,
+    @Param('oldPlayerId') oldPlayerId: string,
+    @Param('newPlayerId') newPlayerId: string,
+  ) {
+    return this.divisionService.replacePlayer(
+      divisionId,
+      oldPlayerId,
+      newPlayerId,
+    );
+  }
 }

@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
 import { Player } from '../player/player.entity.js';
 
 @Entity('divisions')
@@ -20,8 +21,8 @@ export class Division {
   @Column({ unique: true })
   competitionId: string;
 
-  @Column({nullable:true})
-  NumberOfPlayer:  number
+  @Column({ nullable: true })
+  NumberOfPlayer: number;
 
   @Column()
   season: number;
@@ -35,8 +36,10 @@ export class Division {
   @Column()
   name: string;
 
-  @Column({nullable:true,default:'Active'})
-  Status:String
+  // IN_PROGRESS = roster setup; ACTIVE = league has started.
+  // Existing active divisions should remain ACTIVE.
+  @Column({ type: 'varchar', length: 30, nullable: true, default: 'IN_PROGRESS' })
+  Status: string;
 
   @ManyToMany(() => Player)
   @JoinTable()
