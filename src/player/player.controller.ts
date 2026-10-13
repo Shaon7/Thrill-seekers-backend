@@ -55,13 +55,6 @@ export class PlayerController {
     );
   }
 
-  @Delete(':playerId')
-  @UseGuards(JwtAuthGuard, SuperAdminGuard)
-  remove(
-    @Param('playerId') playerId: string,
-  ) {
-    return this.playerService.remove(playerId);
-  }
 
   // =====================================================
   // ADD ADMIN
