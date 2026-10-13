@@ -42,8 +42,11 @@ export class Match {
   @Column({nullable:true})
   round: number;
 
-  @Column()
-  deadline: Date;
+  @Column({
+  type: 'timestamp without time zone',
+  nullable: true,
+})
+deadline: Date | null;
 
   @Column({
     type: 'enum',

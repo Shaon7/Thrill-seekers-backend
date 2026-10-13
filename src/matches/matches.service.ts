@@ -1150,65 +1150,73 @@ await this.divisionRepository.save(division);
       savedMatches,
   };
 }
-  async changeMatchTime(
-    matchId: string,
-    newDate: string,
+  
+async changeMatchTime(
+  matchId: string,
+  newDate: string | null,
+) {
+  const match = await this.findOne(matchId);
+
+  if (
+    match.status !== MatchStatus.SCHEDULED &&
+    match.status !== MatchStatus.RESCHEDULED
   ) {
-    const match =
-      await this.findOne(matchId);
-
-    if (
-      match.status !==
-      MatchStatus.SCHEDULED
-    ) {
-      throw new BadRequestException(
-        'Only scheduled matches can be rescheduled.',
-      );
-    }
-
-    const selectedDate =
-      new Date(
-        `${newDate}T00:00:00`,
-      );
-
-    if (
-      Number.isNaN(
-        selectedDate.getTime(),
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid date.',
-      );
-    }
-
-    const currentDeadline =
-      new Date(
-        match.deadline,
-      );
-
-    selectedDate.setHours(
-      currentDeadline.getHours(),
-      currentDeadline.getMinutes(),
-      currentDeadline.getSeconds(),
-      currentDeadline.getMilliseconds(),
+    throw new BadRequestException(
+      'Only scheduled or rescheduled matches can be changed.',
     );
+  }
 
-    match.deadline =
-      selectedDate;
-
-    match.status =
-      MatchStatus.RESCHEDULED;
+  // Set the deadline to TBD
+  if (newDate === null || newDate.trim() === '') {
+    match.deadline = null;
+    match.status = MatchStatus.RESCHEDULED;
 
     const savedMatch =
-      await this.matchRepository.save(
-        match,
-      );
+      await this.matchRepository.save(match);
 
     return {
       success: true,
-      message:
-        'Match rescheduled successfully.',
+      message: 'Match deadline set to TBD successfully.',
       match: savedMatch,
     };
   }
+
+  // Validate the new date
+  const selectedDate = new Date(
+    `${newDate}T00:00:00`,
+  );
+
+  if (Number.isNaN(selectedDate.getTime())) {
+    throw new BadRequestException('Invalid date.');
+  }
+
+  // Preserve the existing time when a deadline exists
+  if (match.deadline) {
+    const currentDeadline =
+      match.deadline instanceof Date
+        ? new Date(match.deadline.getTime())
+        : new Date(match.deadline);
+
+    if (!Number.isNaN(currentDeadline.getTime())) {
+      selectedDate.setHours(
+        currentDeadline.getHours(),
+        currentDeadline.getMinutes(),
+        currentDeadline.getSeconds(),
+        currentDeadline.getMilliseconds(),
+      );
+    }
+  }
+
+  match.deadline = selectedDate;
+  match.status = MatchStatus.RESCHEDULED;
+
+  const savedMatch =
+    await this.matchRepository.save(match);
+
+  return {
+    success: true,
+    message: 'Match rescheduled successfully.',
+    match: savedMatch,
+  };
+}
 }
