@@ -132,14 +132,28 @@ export class PlayerService {
       throw new NotFoundException('Player not found');
     }
 
-    return player;
-  }
+const {
+    password,
+    passwordResetCode,
+    passwordResetCodeExpiresAt,
+    ...safePlayer
+  } = player;
 
-  async update(
+  return safePlayer;
+  }
+async update(
   playerId: string,
   playerData: Partial<Player>,
 ) {
-  const player = await this.findOne(playerId);
+  // Fetch the complete database entity for updating.
+  // Do not use the public findOne() because it hides sensitive fields.
+  const player = await this.playerRepository.findOne({
+    where: { playerId },
+  });
+
+  if (!player) {
+    throw new NotFoundException('Player not found');
+  }
 
   if (playerData.name !== undefined) {
     player.name = playerData.name;
@@ -162,16 +176,6 @@ export class PlayerService {
 
   return this.playerRepository.save(player);
 }
-
-  async remove(playerId: string) {
-    const player = await this.findOne(playerId);
-
-    await this.playerRepository.remove(player);
-
-    return {
-      message: 'Player deleted successfully',
-    };
-  }
 
   async addAdmin(playerId: string) {
   const player = await this.playerRepository.findOne({
