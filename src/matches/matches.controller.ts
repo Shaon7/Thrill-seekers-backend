@@ -224,4 +224,23 @@ async updateResult(
       body.newDate,
     );
   }
+
+  // =====================================================
+// SET DEADLINE FOR AN ENTIRE ROUND
+// SUPERADMIN ONLY
+// =====================================================
+
+@Patch('competition/:competitionId/round/:round/deadline')
+@UseGuards(JwtAuthGuard, SuperAdminGuard)
+async setRoundDeadline(
+  @Param('competitionId') competitionId: string,
+  @Param('round') round: string,
+  @Body() body: { deadline: string },
+) {
+  return this.matchService.setRoundDeadline(
+    competitionId,
+    Number(round),
+    body.deadline,
+  );
+}
 }

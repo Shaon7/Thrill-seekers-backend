@@ -1219,4 +1219,68 @@ async changeMatchTime(
     match: savedMatch,
   };
 }
+
+
+async setRoundDeadline(
+  competitionId: string,
+  round: number,
+  deadline: string,
+) {
+  if (!Number.isInteger(round) || round < 1) {
+    throw new BadRequestException('Invalid round number.');
+  }
+
+  if (!deadline) {
+    throw new BadRequestException(
+      'Please provide a deadline.',
+    );
+  }
+
+  const selectedDate = new Date(deadline);
+
+  if (Number.isNaN(selectedDate.getTime())) {
+    throw new BadRequestException(
+      'Invalid deadline date or time.',
+    );
+  }
+
+  const roundMatches = await this.matchRepository.find({
+    where: {
+      competitionId,
+      round,
+    },
+  });
+
+  if (roundMatches.length === 0) {
+    throw new NotFoundException(
+      `No matches found for Round ${round}.`,
+    );
+  }
+
+  // Store the UTC time in the existing timestamp
+  // without time zone column.
+  const databaseDeadline = selectedDate
+    .toISOString()
+    .slice(0, 19)
+    .replace('T', ' ');
+
+  await this.matchRepository.query(
+    `UPDATE "matches"
+     SET "deadline" = $1::timestamp without time zone,
+         "updatedAt" = CURRENT_TIMESTAMP
+     WHERE "competitionId" = $2
+       AND "round" = $3`,
+    [databaseDeadline, competitionId, round],
+  );
+
+  return {
+    success: true,
+    message:
+      `Round ${round} deadline updated successfully.`,
+    competitionId,
+    round,
+    deadline: selectedDate.toISOString(),
+    updatedMatches: roundMatches.length,
+  };
+}
 }
